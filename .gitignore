@@ -1,3 +1,5 @@
 *.png
 apu4
 trex-loadtest
+*.md
+*.html

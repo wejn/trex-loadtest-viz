@@ -122,12 +122,10 @@ def do_single_graph(name, data_file, max_tx_pps = nil)
 		set key left top
 		set multiplot layout 2,1
 		set title "#{name} - Channel 0"
-		plot "#{data_file}" using 1:2 title "loss pps" with lines lt rgb "#ff0000" axes x1y1, \
-			"#{data_file}" using 1:3 title "tx pps" with lines lt rgb "#cccc00" axes x1y1, \
+		plot "#{data_file}" using 1:3 title "tx pps" with lines lt rgb "#cccc00" axes x1y1, \
 			"#{data_file}" using 1:4 title "rx pps" with lines lt rgb "#00cc00" axes x1y1
 		set title "#{name} - Channel 1"
-		plot "#{data_file}" using 1:6 title "loss pps" with lines lt rgb "#ff0000" axes x1y1, \
-			"#{data_file}" using 1:7 title "tx pps" with lines lt rgb "#cccc00" axes x1y1, \
+		plot "#{data_file}" using 1:7 title "tx pps" with lines lt rgb "#cccc00" axes x1y1, \
 			"#{data_file}" using 1:8 title "rx pps" with lines lt rgb "#00cc00" axes x1y1
 		quit
 		EOF
@@ -137,25 +135,16 @@ end
 
 def do_multi_graph(name, loadtests, files, max_tx_pps = nil)
 	# XXX: the y2 axis assumes that when max_tx_pps hits maximum, it equals 100% line util
-	# XXX: further assumption -- the TXes are ~same -> using one color and "tx" as name
 	plots_0 = []
-	plots_0_loss = []
 	plots_1 = []
-	plots_1_loss = []
 	loadtests.each do |n, l|
-		plots_0 << "\"#{files[n].path}\" using 1:3 title \"tx\" with lines axes x1y1" if plots_0.empty?
 		plots_0 << "\"#{files[n].path}\" using 1:4 title \"#{n} rx\" with lines axes x1y1"
-		plots_0_loss << "\"#{files[n].path}\" using 1:3 title \"tx\" with lines axes x1y1" if plots_0_loss.empty?
-		plots_0_loss << "\"#{files[n].path}\" using 1:2 title \"#{n} loss\" with lines axes x1y1"
-		plots_1 << "\"#{files[n].path}\" using 1:7 title \"tx\" with lines axes x1y1" if plots_1.empty?
 		plots_1 << "\"#{files[n].path}\" using 1:8 title \"#{n} rx\" with lines axes x1y1"
-		plots_1_loss << "\"#{files[n].path}\" using 1:7 title \"tx\" with lines axes x1y1" if plots_1_loss.empty?
-		plots_1_loss << "\"#{files[n].path}\" using 1:6 title \"#{n} loss\" with lines axes x1y1"
 
 	end
 	IO.popen('gnuplot', 'w') do |f|
 		f.puts <<-EOF
-		set terminal png size 1200,1200
+		set terminal png size 1200,800
 		set datafile separator ","
 		set output "#{name}.png"
 		set ylabel "pps"
@@ -165,15 +154,11 @@ def do_multi_graph(name, loadtests, files, max_tx_pps = nil)
 		set y2range [0:100]
 		set y2tics 10
 		set key left top
-		set multiplot layout 4,1
+		set multiplot layout 2,1
 		set title "#{name} - Channel 0 rx"
 		plot #{plots_0.join(", ")}
-		set title "#{name} - Channel 0 loss"
-		plot #{plots_0_loss.join(", ")}
 		set title "#{name} - Channel 1 rx"
 		plot #{plots_1.join(", ")}
-		set title "#{name} - Channel 1 loss"
-		plot #{plots_1_loss.join(", ")}
 		quit
 		EOF
 	end
@@ -185,6 +170,10 @@ files.each do |n, f|
 	max = stats[n].map { |k, v| v.map { |x| x.tx_pps }.max }.max
 	ret = do_single_graph(n, f.path, max)
 	#FileUtils.cp(f.path, "#{n}.dta") if $DEBUG && ret != 0
+	
+	puts "# single: #{n}"
+	puts "![](#{n}.png)"
+	puts
 end
 
 ## Per profile graphs
@@ -195,6 +184,10 @@ profiles.each do |profile|
 	l = loadtests.find_all { |n, l| l['vars']['profile_file'] == profile }.to_h
 	max = l.map { |n, _| stats[n].map { |k, v| v.map { |x| x.tx_pps }.max }.max }.max
 	do_multi_graph(pn, l, files, max)
+	
+	puts "# multi: #{pn}"
+	puts "![](#{pn}.png)"
+	puts
 end
 
 # Cleanup

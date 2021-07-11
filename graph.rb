@@ -111,98 +111,13 @@ end.to_h
 # }}}
 
 # Output
-def do_single_graph(name, data_file, max_yaxis = nil)
-	# XXX: the y2 axis assumes that when max_yaxis hits maximum, it equals 100% line util
-	IO.popen('gnuplot', 'w') do |f|
-		f.puts <<-EOF
-		set terminal png size 1200,800
-		set datafile separator ","
-		set output "#{name}.png"
-		set xlabel "seconds"
-		set ylabel "#{YSCALER.prefix}pps"
-		set ytics nomirror
-		set yrange [0<*:#{max_yaxis}]
-		set y2label "line util%"
-		set y2range [0:100]
-		set y2tics 10
-		set key left top
-		set multiplot layout 2,1
-		set title "#{name} - Channel 0"
-		plot "#{data_file}" using 1:2 title "tx" with lines lt rgb "#cccc00" axes x1y1, \
-			"#{data_file}" using 1:3 title "rx" with lines lt rgb "#00cc00" axes x1y1
-		set title "#{name} - Channel 1"
-		plot "#{data_file}" using 1:5 title "tx" with lines lt rgb "#cccc00" axes x1y1, \
-			"#{data_file}" using 1:6 title "rx" with lines lt rgb "#00cc00" axes x1y1
-		quit
-		EOF
-	end
-	$?.exitstatus
-end
-
-def do_multi_graph(name, loadtests, files, max_yaxis = nil)
-	# XXX: the y2 axis assumes that when max_yaxis hits maximum, it equals 100% line util
-	plots_0 = []
-	plots_1 = []
-	loadtests.each do |n, l|
-		plots_0 << "\"#{files[n].path}\" using 1:3 title \"#{n} rx\" with lines axes x1y1"
-		plots_1 << "\"#{files[n].path}\" using 1:6 title \"#{n} rx\" with lines axes x1y1"
-
-	end
-	IO.popen('gnuplot', 'w') do |f|
-		f.puts <<-EOF
-		set terminal png size 1200,800
-		set datafile separator ","
-		set output "#{name}.png"
-		set xlabel "seconds"
-		set ylabel "#{YSCALER.prefix}pps"
-		set ytics nomirror
-		set yrange [0<*:#{max_yaxis}]
-		set y2label "line util%"
-		set y2range [0:100]
-		set y2tics 10
-		set key left top
-		set multiplot layout 2,1
-		set title "#{name} - Channel 0 rx"
-		plot #{plots_0.join(", ")}
-		set title "#{name} - Channel 1 rx"
-		plot #{plots_1.join(", ")}
-		quit
-		EOF
-	end
-	$?.exitstatus
-end
-
-## Single graphs
-files.each do |n, f|
-	max = stats[n].map { |k, v| v.map { |x| x.tx_pps }.max }.max
-	ret = do_single_graph(n, f.path, max)
-	#FileUtils.cp(f.path, "#{n}.dta") if $DEBUG && ret != 0
-	
-	puts "# single: #{n}"
-	puts "![](#{n}.png)"
-	puts
-end
-
-## Per profile graphs
-profiles = loadtests.map { |_, c| c['vars']['profile_file'] }.sort.uniq
-
-profiles.each do |profile|
-	pn = KNOWN_PROFILES[profile]
-	l = loadtests.find_all { |n, l| l['vars']['profile_file'] == profile }.to_h
-	max = l.map { |n, _| stats[n].map { |k, v| v.map { |x| x.tx_pps }.max }.max }.max
-	do_multi_graph(pn, l, files, max)
-	
-	puts "# multi: #{pn}"
-	puts "![](#{pn}.png)"
-	puts
-end
-
 ## Per profile javascript
 t = Tempfile.new('loadtest-js')
 t.puts <<-'EOF'
 (function (window) {
 	window.loadtest = {
 EOF
+profiles = loadtests.map { |_, c| c['vars']['profile_file'] }.sort.uniq
 profiles.each do |profile|
 	pn = KNOWN_PROFILES[profile]
 	l = loadtests.find_all { |n, l| l['vars']['profile_file'] == profile }.to_h
@@ -210,7 +125,6 @@ profiles.each do |profile|
 	ideal = []
 	l.each { |n, _| stats[n].each { |k, v| v.each_with_index { |x, i| ideal[i] ||= 0.0; ideal[i] = [ideal[i], x.tx_pps].max } } }
 	ticks = 0.step(ideal.size - (ideal.size % 100), 100).to_a
-	#do_multi_graph(pn, l, files, max)
 	t.puts "\t\t'#{pn}': {"
 	t.puts "\t\t\tmax: #{max},"
 	t.puts "\t\t\tticks: #{ticks.inspect},"

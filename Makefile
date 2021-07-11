@@ -4,4 +4,4 @@ watch:
 push:
 	rm -f graph.rb.html
 	beautify graph.rb
-	scp *.png *.html graph.rb *.js *.css rafc:www/tmp/pim-lt/
+	scp *.html graph.rb *.js *.css rafc:www/tmp/pim-lt/

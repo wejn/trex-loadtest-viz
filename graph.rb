@@ -81,15 +81,9 @@ class Stats
 end
 
 def channel_stats(data, from, to)
-	ipackets, opackets = 0, 0
 	data.map do |k, v|
-		i = v[to]['ipackets']
-		o = v[from]['opackets']
-		#tx_pps = v[from]["tx_pps"] / YSCALER.divisor.to_f
-		#rx_pps = v[to]["rx_pps"] / YSCALER.divisor.to_f
-		tx_pps = (o - opackets) / YSCALER.divisor.to_f
-		rx_pps = (i - ipackets) / YSCALER.divisor.to_f
-		ipackets, opackets = i, o
+		tx_pps = v[from]["tx_pps"] / YSCALER.divisor.to_f
+		rx_pps = v[to]["rx_pps"] / YSCALER.divisor.to_f
 		Stats.new(tx_pps, rx_pps, v[from]["tx_util"])
 	end
 end

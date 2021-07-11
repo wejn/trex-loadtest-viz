@@ -115,7 +115,7 @@ def do_single_graph(name, data_file, max_yaxis = nil)
 	# XXX: the y2 axis assumes that when max_yaxis hits maximum, it equals 100% line util
 	IO.popen('gnuplot', 'w') do |f|
 		f.puts <<-EOF
-		set terminal png size 1200,800
+		set terminal png size 1200,600
 		set datafile separator ","
 		set output "#{name}.png"
 		set xlabel "seconds"
@@ -126,13 +126,11 @@ def do_single_graph(name, data_file, max_yaxis = nil)
 		set y2range [0:100]
 		set y2tics 10
 		set key left top
-		set multiplot layout 2,1
-		set title "#{name} - Channel 0"
-		plot "#{data_file}" using 1:2 title "tx" with lines lt rgb "#cccc00" axes x1y1, \
-			"#{data_file}" using 1:3 title "rx" with lines lt rgb "#00cc00" axes x1y1
-		set title "#{name} - Channel 1"
-		plot "#{data_file}" using 1:5 title "tx" with lines lt rgb "#cccc00" axes x1y1, \
-			"#{data_file}" using 1:6 title "rx" with lines lt rgb "#00cc00" axes x1y1
+		set title "#{name} - Channels 0,1"
+		plot "#{data_file}" using 1:2 title "0→1 tx" with lines axes x1y1, \
+			"#{data_file}" using 1:3 title "0→1 rx" with lines axes x1y1, \
+			"#{data_file}" using 1:5 title "1→0 tx" with lines axes x1y1, \
+			"#{data_file}" using 1:6 title "1→0 rx" with lines axes x1y1
 		quit
 		EOF
 	end
@@ -144,13 +142,13 @@ def do_multi_graph(name, loadtests, files, max_yaxis = nil)
 	plots_0 = []
 	plots_1 = []
 	loadtests.each do |n, l|
-		plots_0 << "\"#{files[n].path}\" using 1:3 title \"#{n} rx\" with lines axes x1y1"
-		plots_1 << "\"#{files[n].path}\" using 1:6 title \"#{n} rx\" with lines axes x1y1"
+		plots_0 << "\"#{files[n].path}\" using 1:3 title \"#{n} 0→1 rx\" with lines axes x1y1"
+		plots_1 << "\"#{files[n].path}\" using 1:6 title \"#{n} 1→0 rx\" with lines axes x1y1"
 
 	end
 	IO.popen('gnuplot', 'w') do |f|
 		f.puts <<-EOF
-		set terminal png size 1200,800
+		set terminal png size 1200,600
 		set datafile separator ","
 		set output "#{name}.png"
 		set xlabel "seconds"
@@ -161,11 +159,8 @@ def do_multi_graph(name, loadtests, files, max_yaxis = nil)
 		set y2range [0:100]
 		set y2tics 10
 		set key left top
-		set multiplot layout 2,1
-		set title "#{name} - Channel 0 rx"
-		plot #{plots_0.join(", ")}
-		set title "#{name} - Channel 1 rx"
-		plot #{plots_1.join(", ")}
+		set title "#{name} - Channels 0,1 rx"
+		plot #{plots_0.join(", ")},#{plots_1.join(", ")}
 		quit
 		EOF
 	end

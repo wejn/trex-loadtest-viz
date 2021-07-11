@@ -73,10 +73,10 @@ end
 # }}}
 
 # Crunch the stats # {{{
-Stats = Struct.new(:loss, :tx_pps, :rx_pps, :util)
+Stats = Struct.new(:tx_pps, :rx_pps, :tx_util)
 class Stats
 	def to_s
-		"%.04f,%.04f,%.04f,%.04f" % [self.loss, self.tx_pps, self.rx_pps, self.util]
+		"%.04f,%.04f,%.04f" % [self.tx_pps, self.rx_pps, self.tx_util]
 	end
 end
 
@@ -84,8 +84,7 @@ def channel_stats(data, from, to)
 	data.map do |k, v|
 		tx_pps = v[from]["tx_pps"] / YSCALER.divisor.to_f
 		rx_pps = v[to]["rx_pps"] / YSCALER.divisor.to_f
-		loss = tx_pps - rx_pps
-		Stats.new(loss, tx_pps, rx_pps, v[from]["tx_util"])
+		Stats.new(tx_pps, rx_pps, v[from]["tx_util"])
 	end
 end
 
@@ -129,11 +128,11 @@ def do_single_graph(name, data_file, max_yaxis = nil)
 		set key left top
 		set multiplot layout 2,1
 		set title "#{name} - Channel 0"
-		plot "#{data_file}" using 1:3 title "tx" with lines lt rgb "#cccc00" axes x1y1, \
-			"#{data_file}" using 1:4 title "rx" with lines lt rgb "#00cc00" axes x1y1
+		plot "#{data_file}" using 1:2 title "tx" with lines lt rgb "#cccc00" axes x1y1, \
+			"#{data_file}" using 1:3 title "rx" with lines lt rgb "#00cc00" axes x1y1
 		set title "#{name} - Channel 1"
-		plot "#{data_file}" using 1:7 title "tx" with lines lt rgb "#cccc00" axes x1y1, \
-			"#{data_file}" using 1:8 title "rx" with lines lt rgb "#00cc00" axes x1y1
+		plot "#{data_file}" using 1:5 title "tx" with lines lt rgb "#cccc00" axes x1y1, \
+			"#{data_file}" using 1:6 title "rx" with lines lt rgb "#00cc00" axes x1y1
 		quit
 		EOF
 	end
@@ -145,8 +144,8 @@ def do_multi_graph(name, loadtests, files, max_yaxis = nil)
 	plots_0 = []
 	plots_1 = []
 	loadtests.each do |n, l|
-		plots_0 << "\"#{files[n].path}\" using 1:4 title \"#{n} rx\" with lines axes x1y1"
-		plots_1 << "\"#{files[n].path}\" using 1:8 title \"#{n} rx\" with lines axes x1y1"
+		plots_0 << "\"#{files[n].path}\" using 1:3 title \"#{n} rx\" with lines axes x1y1"
+		plots_1 << "\"#{files[n].path}\" using 1:6 title \"#{n} rx\" with lines axes x1y1"
 
 	end
 	IO.popen('gnuplot', 'w') do |f|

@@ -197,5 +197,40 @@ profiles.each do |profile|
 	puts
 end
 
+## Per profile javascript
+t = Tempfile.new('loadtest-js')
+t.puts <<-'EOF'
+(function (window) {
+	window.loadtest = {
+EOF
+profiles.each do |profile|
+	pn = KNOWN_PROFILES[profile]
+	l = loadtests.find_all { |n, l| l['vars']['profile_file'] == profile }.to_h
+	max = l.map { |n, _| stats[n].map { |k, v| v.map { |x| x.tx_pps }.max }.max }.max
+	ideal = []
+	l.each { |n, _| stats[n].each { |k, v| v.each_with_index { |x, i| ideal[i] ||= 0.0; ideal[i] = [ideal[i], x.tx_pps].max } } }
+	ticks = 0.step(ideal.size - (ideal.size % 100), 100).to_a
+	#do_multi_graph(pn, l, files, max)
+	t.puts "\t\t'#{pn}': {"
+	t.puts "\t\t\tmax: #{max},"
+	t.puts "\t\t\tticks: #{ticks.inspect},"
+	t.puts "\t\t\tdata: ["
+	t.puts "\t\t\t\t['ideal', #{ideal.map { |i| "%.03f" % i }.join(", ")}],"
+	l.each do |tn, _|
+		stats[tn].each do |ch, data|
+			t.puts "\t\t\t\t['#{tn} #{ch}→#{1-ch} rx', #{data.map(&:rx_pps).map { |i| "%.03f" % i }.join(", ")}],"
+		end
+	end
+	t.puts "\t\t\t],"
+	t.puts "\t\t},"
+end
+t.puts <<-'EOF'
+	};
+})(window);
+EOF
+t.close
+FileUtils.cp(t.path, 'loadtest.js')
+t.unlink
+
 # Cleanup
 files.each { |n, f| f.close; f.unlink }

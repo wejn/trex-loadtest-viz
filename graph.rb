@@ -9,6 +9,12 @@ KNOWN_PROFILES = Hash.new { |h, k| h[k] = File.basename(k, '.py') }
 KNOWN_PROFILES['imix.py'] = 'imix'
 KNOWN_PROFILES['udp_1pkt_simple_bdir.py'] = '64B'
 
+# This is akin to a global variable -- YSCALER influences the y axis scaling for the graphs
+YAxisScaling = Struct.new(:divisor, :prefix)
+YSCALER = YAxisScaling.new(1000000, 'm')
+#YSCALER = YAxisScaling.new(1, '')
+
+
 # Load up the loadtests # {{{
 all_inputs_ok = true
 loadtests = ARGV.map do |c|
@@ -76,8 +82,8 @@ end
 
 def channel_stats(data, from, to)
 	data.map do |k, v|
-		tx_pps = v[from]["tx_pps"]
-		rx_pps = v[to]["rx_pps"]
+		tx_pps = v[from]["tx_pps"] / YSCALER.divisor.to_f
+		rx_pps = v[to]["rx_pps"] / YSCALER.divisor.to_f
 		loss = tx_pps - rx_pps
 		Stats.new(loss, tx_pps, rx_pps, v[from]["tx_util"])
 	end
@@ -106,35 +112,36 @@ end.to_h
 # }}}
 
 # Output
-def do_single_graph(name, data_file, max_tx_pps = nil)
-	# XXX: the y2 axis assumes that when max_tx_pps hits maximum, it equals 100% line util
+def do_single_graph(name, data_file, max_yaxis = nil)
+	# XXX: the y2 axis assumes that when max_yaxis hits maximum, it equals 100% line util
 	IO.popen('gnuplot', 'w') do |f|
 		f.puts <<-EOF
 		set terminal png size 1200,800
 		set datafile separator ","
 		set output "#{name}.png"
-		set ylabel "pps"
+		set xlabel "seconds"
+		set ylabel "#{YSCALER.prefix}pps"
 		set ytics nomirror
-		set yrange [0<*:#{max_tx_pps}]
+		set yrange [0<*:#{max_yaxis}]
 		set y2label "line util%"
 		set y2range [0:100]
 		set y2tics 10
 		set key left top
 		set multiplot layout 2,1
 		set title "#{name} - Channel 0"
-		plot "#{data_file}" using 1:3 title "tx pps" with lines lt rgb "#cccc00" axes x1y1, \
-			"#{data_file}" using 1:4 title "rx pps" with lines lt rgb "#00cc00" axes x1y1
+		plot "#{data_file}" using 1:3 title "tx" with lines lt rgb "#cccc00" axes x1y1, \
+			"#{data_file}" using 1:4 title "rx" with lines lt rgb "#00cc00" axes x1y1
 		set title "#{name} - Channel 1"
-		plot "#{data_file}" using 1:7 title "tx pps" with lines lt rgb "#cccc00" axes x1y1, \
-			"#{data_file}" using 1:8 title "rx pps" with lines lt rgb "#00cc00" axes x1y1
+		plot "#{data_file}" using 1:7 title "tx" with lines lt rgb "#cccc00" axes x1y1, \
+			"#{data_file}" using 1:8 title "rx" with lines lt rgb "#00cc00" axes x1y1
 		quit
 		EOF
 	end
 	$?.exitstatus
 end
 
-def do_multi_graph(name, loadtests, files, max_tx_pps = nil)
-	# XXX: the y2 axis assumes that when max_tx_pps hits maximum, it equals 100% line util
+def do_multi_graph(name, loadtests, files, max_yaxis = nil)
+	# XXX: the y2 axis assumes that when max_yaxis hits maximum, it equals 100% line util
 	plots_0 = []
 	plots_1 = []
 	loadtests.each do |n, l|
@@ -147,9 +154,10 @@ def do_multi_graph(name, loadtests, files, max_tx_pps = nil)
 		set terminal png size 1200,800
 		set datafile separator ","
 		set output "#{name}.png"
-		set ylabel "pps"
+		set xlabel "seconds"
+		set ylabel "#{YSCALER.prefix}pps"
 		set ytics nomirror
-		set yrange [0<*:#{max_tx_pps}]
+		set yrange [0<*:#{max_yaxis}]
 		set y2label "line util%"
 		set y2range [0:100]
 		set y2tics 10

@@ -11,7 +11,7 @@ KNOWN_PROFILES['udp_1pkt_simple_bdir.py'] = '64B'
 
 # This is akin to a global variable -- YSCALER influences the y axis scaling for the graphs
 YAxisScaling = Struct.new(:divisor, :prefix)
-YSCALER = YAxisScaling.new(1000000, 'm')
+YSCALER = YAxisScaling.new(1000000, 'M')
 #YSCALER = YAxisScaling.new(1, '')
 
 

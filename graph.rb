@@ -141,8 +141,7 @@ files = stats.map do |n, s|
 end.to_h
 # }}}
 
-# Output
-## Per profile javascript
+# Compute per profile json (for the graphs)
 ltdata = {}
 profiles = loadtests.map { |_, c| c['vars']['profile_file'] }.sort.uniq
 profiles.each do |profile|
@@ -167,6 +166,7 @@ profiles.each do |profile|
     ltdata[pn] = out
 end
 
+# Output
 ## Html
 t = Tempfile.new('index-html')
 begin

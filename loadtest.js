@@ -1,9 +1,9 @@
 (function () {
-    function LoadtestGraph(elem, profile_name) {
+    function LoadtestGraph(elem, ltdata) {
 		var chart = c3.generate({
 			bindto: elem,
 			data: {
-				columns: loadtest[profile_name]['data'],
+				columns: ltdata['data'],
 				regions: {
 					'ideal': [{'start': 0, 'style': 'dashed'}]
 				},
@@ -17,7 +17,7 @@
 			axis: {
 				x: {
 					tick: {
-						values: loadtest[profile_name]['ticks'],
+						values: ltdata['ticks'],
 					},
 					label: {
 						text: 'seconds',
@@ -26,10 +26,10 @@
 				},
 				y: {
 					min: 0,
-					max: loadtest[profile_name]['max'],
+					max: ltdata['max'],
 					padding: { top: 0, bottom: 0 },
 					label: {
-						text: loadtest[profile_name]['yprefix'] + 'pps',
+						text: ltdata['yprefix'] + 'pps',
 						position: 'outer-middle'
 					}
 				},
@@ -47,7 +47,7 @@
 			grid: {
 				y: {
 					lines: [
-						{value: loadtest[profile_name]['max']}
+						{value: ltdata['max']}
 					]
 				}
 			}
@@ -56,8 +56,8 @@
 
     $(window).on("load", function() {
 		$('div.loadtest-graph').each(function(index, el) {
-			if (el.dataset.ltname) {
-				LoadtestGraph(el, el.dataset.ltname);
+			if (el.dataset.ltdata) {
+				LoadtestGraph(el, JSON.parse(el.dataset.ltdata));
 			}
 		});
     });

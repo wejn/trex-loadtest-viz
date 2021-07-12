@@ -4,6 +4,7 @@ require 'json'
 require 'pp'
 require 'tempfile'
 require 'fileutils'
+require 'cgi'
 
 KNOWN_PROFILES = Hash.new { |h, k| h[k] = File.basename(k, '.py') }
 KNOWN_PROFILES['imix.py'] = 'imix'
@@ -166,16 +167,6 @@ profiles.each do |profile|
     ltdata[pn] = out
 end
 
-t = Tempfile.new('loadtest-js')
-begin
-    t.puts "(function(window){window.loadtest=#{ltdata.to_json};})(window);"
-    t.close
-    FileUtils.cp(t.path, 'ltdata.js')
-ensure
-    t.close
-    t.unlink
-end
-
 ## Html
 t = Tempfile.new('index-html')
 begin
@@ -188,7 +179,6 @@ begin
     <script src="d3.v5.min.js" charset="utf-8"></script>
     <script src="c3.min.js"></script>
     <script src="jquery.min.js"></script>
-    <script src="ltdata.js"></script>
     <script src="loadtest.js"></script>
     <style>
       .loadtest-graph { margin: 2em 0; }
@@ -249,7 +239,7 @@ begin
             t.puts "    </tr>"
         end
         t.puts "    </table>"
-        t.puts "    <div class=\"loadtest-graph\" data-ltname=\"#{pn}\" style=\"width: 1200px; height: 600px\"></div>"
+        t.puts "    <div class=\"loadtest-graph\" data-ltdata=\"#{CGI.escapeHTML(ltdata[pn].to_json)}\" style=\"width: 1200px; height: 600px\"></div>"
     end
     t.puts <<-'EOF'
   </body>

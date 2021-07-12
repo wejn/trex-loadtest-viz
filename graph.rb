@@ -248,6 +248,7 @@ begin
     EOF
     t.close
     FileUtils.cp(t.path, 'index.html')
+    File.chmod((0666 ^ File.umask), 'index.html')
 ensure
     t.close
     t.unlink

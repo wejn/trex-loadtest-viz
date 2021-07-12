@@ -222,7 +222,6 @@ begin
     profiles.each do |profile|
         pn = KNOWN_PROFILES[profile]
         l = loadtests.find_all { |n, l| l['vars']['profile_file'] == profile }.to_h
-        t.puts "    <!-- FIXME: table with results -->"
         t.puts "    <h2>Profile: #{pn}</h2>"
         t.puts "    <table class=\"stats-table\">"
         t.puts "    <caption>Point of overload</caption>"

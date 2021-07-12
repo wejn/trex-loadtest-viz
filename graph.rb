@@ -159,6 +159,11 @@ begin
     <script src="jquery.min.js"></script>
     <script src="ltdata.js"></script>
     <script src="loadtest.js"></script>
+    <style>
+      table.config-table { border: 2px solid black; border-collapse: collapse; }
+      table.config-table th { border: 1px solid #aaa; padding: 0.2em 0.5em; }
+      table.config-table td { border: 1px solid #aaa; padding: 0.2em 0.5em; }
+    </style>
   </head>
   <body>
     <h1>Loadtest results</h1>
@@ -166,10 +171,10 @@ begin
     # Config section
     t.puts <<-'EOF'
     <h2>Config</h2>
-    <table>
+    <table class="config-table">
       <tr>
-        <td>key</td>
-        <td>value</td>
+        <th>key</th>
+        <th>value</th>
       </tr>
     EOF
     config_keys_to_verify.zip(configs.first).each do |k,v|

@@ -187,6 +187,7 @@ begin
       table th:not([colspan]) { border-bottom: 2px solid black; }
       table td { border: 1px solid #aaa; padding: 0.2em 0.5em; }
     </style>
+    <title>Loadtest results</title>
   </head>
   <body>
     <h1>Loadtest results</h1>

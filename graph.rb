@@ -191,6 +191,7 @@ begin
     <script src="ltdata.js"></script>
     <script src="loadtest.js"></script>
     <style>
+      .loadtest-graph { margin: 2em 0; }
       table { border: 2px solid black; border-collapse: collapse; }
       table th { border: 1px solid #aaa; padding: 0.2em 0.5em; }
       table th:not([colspan]) { border-bottom: 2px solid black; }
@@ -248,9 +249,7 @@ begin
             t.puts "    </tr>"
         end
         t.puts "    </table>"
-        t.puts "    <p>"
         t.puts "    <div class=\"loadtest-graph\" data-ltname=\"#{pn}\" style=\"width: 1200px; height: 600px\"></div>"
-        t.puts "    </p>"
     end
     t.puts <<-'EOF'
   </body>

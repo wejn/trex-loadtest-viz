@@ -9,6 +9,7 @@
     <script src="ltdata.js"></script>
     <script src="loadtest.js"></script>
     <style>
+      .loadtest-graph { margin: 2em 0; }
       table { border: 2px solid black; border-collapse: collapse; }
       table th { border: 1px solid #aaa; padding: 0.2em 0.5em; }
       table th:not([colspan]) { border-bottom: 2px solid black; }
@@ -87,9 +88,7 @@
       <td>23.41%</td>
     </tr>
     </table>
-    <p>
     <div class="loadtest-graph" data-ltname="imix" style="width: 1200px; height: 600px"></div>
-    </p>
     <h2>Profile: 64B</h2>
     <table class="stats-table">
     <caption>Point of overload</caption>
@@ -140,8 +139,6 @@
       <td>3.28%</td>
     </tr>
     </table>
-    <p>
     <div class="loadtest-graph" data-ltname="64B" style="width: 1200px; height: 600px"></div>
-    </p>
   </body>
 </html>

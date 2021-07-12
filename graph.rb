@@ -9,6 +9,9 @@ KNOWN_PROFILES = Hash.new { |h, k| h[k] = File.basename(k, '.py') }
 KNOWN_PROFILES['imix.py'] = 'imix'
 KNOWN_PROFILES['udp_1pkt_simple_bdir.py'] = '64B'
 
+# The point at which we consider the test failed
+FAIL_THRESHOLD = 0.001
+
 # This is akin to a global variable -- YSCALER influences the y axis scaling for the graphs
 YAxisScaling = Struct.new(:divisor, :prefix)
 YSCALER = YAxisScaling.new(1000000, 'M')
@@ -98,6 +101,34 @@ stats = loadtests.map do |n, l|
     [n, s]
 end.to_h
 
+def breaking_point(data, from, to)
+    bp = nil
+    data.each do |k, v|
+        tx_pps = v[from]["tx_pps"]
+        rx_pps = v[to]["rx_pps"]
+        util = v[from]["tx_util"]
+        if (tx_pps - rx_pps) / tx_pps > FAIL_THRESHOLD
+            if bp.nil?
+                # record first fail
+                bp = Stats.new(tx_pps / YSCALER.divisor.to_f, rx_pps / YSCALER.divisor.to_f, util)
+            end
+        else
+            bp = nil # this way, when it recovers, we clear bp
+        end
+    end
+    bp
+end
+
+breaking_points = loadtests.map do |n, l|
+    if l["stats"].keys.size == 3
+        STDERR.puts "W: Stats for #{n} have #{l["stats"].keys} channels (incl. global), this script can only deal with 3."
+    end
+    s = {}
+    s[0] = breaking_point(l["stats"], "0", "1")
+    s[1] = breaking_point(l["stats"], "1", "0")
+    [n, s]
+end.to_h
+
 # }}}
 
 # Dump the data to tempfile # {{{
@@ -160,9 +191,10 @@ begin
     <script src="ltdata.js"></script>
     <script src="loadtest.js"></script>
     <style>
-      table.config-table { border: 2px solid black; border-collapse: collapse; }
-      table.config-table th { border: 1px solid #aaa; padding: 0.2em 0.5em; }
-      table.config-table td { border: 1px solid #aaa; padding: 0.2em 0.5em; }
+      table { border: 2px solid black; border-collapse: collapse; }
+      table th { border: 1px solid #aaa; padding: 0.2em 0.5em; }
+      table th:not([colspan]) { border-bottom: 2px solid black; }
+      table td { border: 1px solid #aaa; padding: 0.2em 0.5em; }
     </style>
   </head>
   <body>
@@ -189,9 +221,37 @@ begin
     # Per-profile sections
     profiles.each do |profile|
         pn = KNOWN_PROFILES[profile]
+        l = loadtests.find_all { |n, l| l['vars']['profile_file'] == profile }.to_h
         t.puts "    <!-- FIXME: table with results -->"
         t.puts "    <h2>Profile: #{pn}</h2>"
+        t.puts "    <table class=\"stats-table\">"
+        t.puts "    <caption>Point of overload</caption>"
+        t.puts "    <tr>"
+        t.puts "      <th rowspan=\"2\">Profile</th>"
+        t.puts "      <th colspan=\"2\">Channel 0</th>"
+        t.puts "      <th colspan=\"2\">Channel 1</th>"
+        t.puts "    </tr>"
+        t.puts "    <tr>"
+        t.puts "      <th>#{YSCALER.prefix}pps</th>"
+        t.puts "      <th>%LR</th>"
+        t.puts "      <th>#{YSCALER.prefix}pps</th>"
+        t.puts "      <th>%LR</th>"
+        t.puts "    </tr>"
+        bpsort = lambda { |(ln, _)| bp = breaking_points[ln]; [bp[0] ? -bp[0].tx_util : -101, bp[1] ? -bp[1].tx_util : -101] }
+        l.sort_by(&bpsort).each do |ln, _|
+            bp = breaking_points[ln]
+            t.puts "    <tr>"
+            t.puts "      <td>#{ln}</td>"
+            t.puts "      <td>#{bp[0].nil? ? 'N/A' : bp[0].rx_pps.round(3)}</td>"
+            t.puts "      <td>#{bp[0].nil? ? 'N/A' : ('%.02f%%' % bp[0].tx_util)}</td>"
+            t.puts "      <td>#{bp[1].nil? ? 'N/A' : bp[1].rx_pps.round(3)}</td>"
+            t.puts "      <td>#{bp[1].nil? ? 'N/A' : ('%.02f%%' % bp[1].tx_util)}</td>"
+            t.puts "    </tr>"
+        end
+        t.puts "    </table>"
+        t.puts "    <p>"
         t.puts "    <div class=\"loadtest-graph\" data-ltname=\"#{pn}\" style=\"width: 1200px; height: 600px\"></div>"
+        t.puts "    </p>"
     end
     t.puts <<-'EOF'
   </body>

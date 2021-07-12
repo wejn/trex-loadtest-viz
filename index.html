@@ -1,126 +1,21 @@
-<html>
-    <head>
-        <meta charset="UTF-8">
-        <!-- Load c3.css -->
-        <link href="c3.css" rel="stylesheet">
-
-        <!-- Load d3.js and c3.js -->
-        <script src="d3.v5.min.js" charset="utf-8"></script>
-        <script src="c3.min.js"></script>
-        <script src="loadtest.js"></script>
-    </head>
-    <body>
-
-        <h1>Interactive</h1>
-        <h2>imix</h2>
-        <div id="chart-imix" style="width: 1200px; height: 600px"></div>
-        <h2>64B</h2>
-        <div id="chart-64B" style="width: 1200px; height: 600px"></div>
-        <script>
-            var chart_imix = c3.generate({
-                bindto: '#chart-imix',
-                data: {
-                    columns: loadtest['imix']['data'],
-                    regions: {
-                        'ideal': [{'start': 0, 'style': 'dashed'}]
-                    },
-                    colors: {
-                        'ideal': '#bbbbbb',
-                    }
-                },
-                point: {
-                    show: false
-                },
-                axis: {
-                    x: {
-                        tick: {
-                            values: loadtest['imix']['ticks'],
-                        },
-                        label: {
-                            text: 'seconds',
-                            position: 'outer-center'
-                        }
-                    },
-                    y: {
-                        min: 0,
-                        max: loadtest['imix']['max'],
-                        padding: { top: 0, bottom: 0 },
-                        label: {
-                            text: 'Mpps',
-                            position: 'outer-middle'
-                        }
-                    },
-                    y2: {
-                        show: true,
-                        min: 0,
-                        max: 100,
-                        padding: { top: 0, bottom: 0 },
-                        label: {
-                            text: '% of linerate',
-                            position: 'outer-middle'
-                        }
-                    }
-                },
-                grid: {
-                    y: {
-                        lines: [
-                            {value: loadtest['imix']['max']}
-                        ]
-                    }
-                }
-            });
-            var chart_64B = c3.generate({
-                bindto: '#chart-64B',
-                data: {
-                    columns: loadtest['64B']['data'],
-                    regions: {
-                        'ideal': [{'start': 0, 'style': 'dashed'}]
-                    },
-                    colors: {
-                        'ideal': '#bbbbbb',
-                    }
-                },
-                point: {
-                    show: false
-                },
-                axis: {
-                    x: {
-                        tick: {
-                            values: loadtest['64B']['ticks'],
-                        },
-                        label: {
-                            text: 'seconds',
-                            position: 'outer-center'
-                        }
-                    },
-                    y: {
-                        min: 0,
-                        max: loadtest['64B']['max'],
-                        padding: { top: 0, bottom: 0 },
-                        label: {
-                            text: 'Mpps',
-                            position: 'outer-middle'
-                        }
-                    },
-                    y2: {
-                        show: true,
-                        min: 0,
-                        max: 100,
-                        padding: { top: 0, bottom: 0 },
-                        label: {
-                            text: '% of linerate',
-                            position: 'outer-middle'
-                        }
-                    }
-                },
-                grid: {
-                    y: {
-                        lines: [
-                            {value: loadtest['64B']['max']}
-                        ]
-                    }
-                }
-            });
-        </script>
-    </body>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <link href="c3.css" rel="stylesheet">
+    <script src="d3.v5.min.js" charset="utf-8"></script>
+    <script src="c3.min.js"></script>
+    <script src="jquery.min.js"></script>
+    <script src="ltdata.js"></script>
+    <script src="loadtest.js"></script>
+  </head>
+  <body>
+    <h1>Loadtest results</h1>
+    <!-- FIXME: header -->
+    <!-- FIXME: table with results -->
+    <h2>imix</h2>
+    <div class="loadtest-graph" data-ltname="imix" style="width: 1200px; height: 600px"></div>
+    <h2>64B</h2>
+    <div class="loadtest-graph" data-ltname="64B" style="width: 1200px; height: 600px"></div>
+  </body>
 </html>

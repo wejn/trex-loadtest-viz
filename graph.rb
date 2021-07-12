@@ -14,7 +14,6 @@ YAxisScaling = Struct.new(:divisor, :prefix)
 YSCALER = YAxisScaling.new(1000000, 'M')
 #YSCALER = YAxisScaling.new(1, '')
 
-
 # Load up the loadtests # {{{
 all_inputs_ok = true
 loadtests = ARGV.map do |c|
@@ -112,39 +111,76 @@ end.to_h
 
 # Output
 ## Per profile javascript
-t = Tempfile.new('loadtest-js')
-t.puts <<-'EOF'
-(function (window) {
-	window.loadtest = {
-EOF
+ltdata = {}
 profiles = loadtests.map { |_, c| c['vars']['profile_file'] }.sort.uniq
 profiles.each do |profile|
 	pn = KNOWN_PROFILES[profile]
+	out = {}
 	l = loadtests.find_all { |n, l| l['vars']['profile_file'] == profile }.to_h
 	max = l.map { |n, _| stats[n].map { |k, v| v.map { |x| x.tx_pps }.max }.max }.max
 	ideal = []
 	l.each { |n, _| stats[n].each { |k, v| v.each_with_index { |x, i| ideal[i] ||= 0.0; ideal[i] = [ideal[i], x.tx_pps].max } } }
 	ticks = 0.step(ideal.size - (ideal.size % 100), 100).to_a
-	t.puts "\t\t'#{pn}': {"
-	t.puts "\t\t\tmax: #{max},"
-	t.puts "\t\t\tticks: #{ticks.inspect},"
-	t.puts "\t\t\tdata: ["
-	t.puts "\t\t\t\t['ideal', #{ideal.map { |i| "%.03f" % i }.join(", ")}],"
+	out['max'] = max
+	out['yprefix'] = YSCALER.prefix
+	out['ticks'] = ticks
+	out['data'] = [
+		['ideal'] + ideal.map { |x| x.round(3) },
+	]
 	l.each do |tn, _|
 		stats[tn].each do |ch, data|
-			t.puts "\t\t\t\t['#{tn} #{ch}→#{1-ch} rx', #{data.map(&:rx_pps).map { |i| "%.03f" % i }.join(", ")}],"
+			out['data'] << (["#{tn} #{ch}→#{1-ch} rx"] + data.map { |x| x.rx_pps.round(3) })
 		end
 	end
-	t.puts "\t\t\t],"
-	t.puts "\t\t},"
+	ltdata[pn] = out
 end
-t.puts <<-'EOF'
-	};
-})(window);
-EOF
-t.close
-FileUtils.cp(t.path, 'loadtest.js')
-t.unlink
+
+t = Tempfile.new('loadtest-js')
+begin
+	t.puts "(function(window){window.loadtest=#{ltdata.to_json};})(window);"
+	t.close
+	FileUtils.cp(t.path, 'ltdata.js')
+ensure
+	t.close
+	t.unlink
+end
+
+## Html
+t = Tempfile.new('index-html')
+begin
+	t.puts <<-'EOF'
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <link href="c3.css" rel="stylesheet">
+    <script src="d3.v5.min.js" charset="utf-8"></script>
+    <script src="c3.min.js"></script>
+    <script src="jquery.min.js"></script>
+    <script src="ltdata.js"></script>
+    <script src="loadtest.js"></script>
+  </head>
+  <body>
+    <h1>Loadtest results</h1>
+    <!-- FIXME: header -->
+    <!-- FIXME: table with results -->
+	EOF
+	profiles.each do |profile|
+		pn = KNOWN_PROFILES[profile]
+		t.puts "    <h2>#{pn}</h2>"
+		t.puts "    <div class=\"loadtest-graph\" data-ltname=\"#{pn}\" style=\"width: 1200px; height: 600px\"></div>"
+	end
+	t.puts <<-'EOF'
+  </body>
+</html>
+	EOF
+	t.close
+	FileUtils.cp(t.path, 'index.html')
+ensure
+	t.close
+	t.unlink
+end
+
 
 # Cleanup
 files.each { |n, f| f.close; f.unlink }

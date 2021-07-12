@@ -31,3 +31,5 @@ files should be in the repo.
 
 ## Credits
 © 2021 Michal Jirků, licensed under GPL-3.0 [unless agreed otherwise]
+
+The `c3-0.7.20`, `jquery.min.js` are covered by their respective licenses.

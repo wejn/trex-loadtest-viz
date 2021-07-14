@@ -9,10 +9,14 @@
 		data: {
 			columns: ltdata['data'],
 			regions: {
-				'ideal': [{'start': 0, 'style': 'dashed'}]
+				'ideal': error ? [] : [{'start': 0, 'style': 'dashed'}]
 			},
 			colors: {
 				'ideal': '#bbbbbb',
+				'txrate': '#bbbbbb',
+			},
+			axes: {
+			    'txrate': 'y2'
 			}
 		},
 		point: {
@@ -30,37 +34,35 @@
 			},
 			y: {
 				min: 0,
-				max: ltdata['max'],
+				max: error ? 1 : ltdata['max'],
 				padding: { top: 0, bottom: 0 },
 				type: (error ? 'log' : 'linear'),
 				tick: {
 				    format: d3.format('.3f'),
 				},
 				label: {
-				    text: (error ? 'fraction of current pps (log)' : ltdata['yprefix'] + 'pps'),
+				    text: (error ? 'err fraction of txrate (log)' : ltdata['yprefix'] + 'pps'),
 				    position: 'outer-middle'
 				}
 			},
 			y2: {
-				show: error ? false : true,
+				show: true,
 				min: 0,
-				max: 1,
-				type: (error ? 'log' : 'linear'),
+				max: error ? ltdata['max'] : 1,
+				type: (error ? 'linear' : 'linear'),
 				tick: {
 				    format: d3.format(error ? '.3f' : '.1f'),
 				},
 				padding: { top: 0, bottom: 0 },
 				label: {
-					text: 'fraction of linerate',
+					text: error ? 'txrate ' + ltdata['yprefix'] + 'pps' : 'fraction of linerate',
 					position: 'outer-middle'
 				}
 			}
 		},
 		grid: {
 			y: {
-				lines: [
-					{value: ltdata['max']}
-				]
+			    lines: error ? [{value: ltdata['ft'], text: 'fail threshold', class: 'ft', position: 'start'}, {value: ltdata['max']}] : [{value: ltdata['max']}]
 			}
 		}
 	});

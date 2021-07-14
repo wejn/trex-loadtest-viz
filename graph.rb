@@ -159,6 +159,7 @@ profiles.each do |profile|
     out['yprefix'] = YSCALER.prefix
     out['ticks'] = ticks
     od << (['ideal'] + ideal.map { |x| x.round(3) })
+    oe << (['txrate'] + ideal.map { |x| x.round(3) })
     l.each do |tn, _|
         stats[tn].each do |ch, data|
             od << (["#{tn} #{ch}→#{1-ch} rx"] + data.map { |x| x.rx_pps.round(3) })
@@ -166,7 +167,7 @@ profiles.each do |profile|
         end
     end
     ltdata[pn] = out.dup.merge({'data': od})
-    edata[pn] = out.dup.merge({'data': oe, 'max': 1})
+    edata[pn] = out.dup.merge({'data': oe, 'ft': FAIL_THRESHOLD})
 end
 
 # Output
@@ -185,6 +186,8 @@ begin
     <script src="loadtest.js"></script>
     <style>
       .loadtest-graph { margin: 2em 0; }
+      .ft line { stroke: #a00; fill: #a00; }
+      .ft text { stroke: #a00 }
       table { border: 2px solid black; border-collapse: collapse; }
       table th { border: 1px solid #aaa; padding: 0.2em 0.5em; }
       table th:not([colspan]) { border-bottom: 2px solid black; }

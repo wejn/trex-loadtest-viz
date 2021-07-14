@@ -77,11 +77,6 @@ end
 
 # Crunch the stats # {{{
 Stats = Struct.new(:tx_pps, :rx_pps, :tx_util)
-class Stats
-    def to_s
-        "%.04f,%.04f,%.04f" % [self.tx_pps, self.rx_pps, self.tx_util]
-    end
-end
 
 def channel_stats(data, from, to)
     data.map do |k, v|
@@ -141,15 +136,6 @@ max_performance = loadtests.map do |n, l|
     [n, s]
 end.to_h
 
-# }}}
-
-# Dump the data to tempfile # {{{
-files = stats.map do |n, s|
-    f = Tempfile.new("loadtest-stats-#{n}")
-    s[0].each_with_index { |stat, i| f.puts("#{i}," + stat.to_s + "," + s[1][i].to_s) }
-    f.fsync rescue nil
-    [n, f]
-end.to_h
 # }}}
 
 # Compute per profile json (for the graphs)
@@ -268,7 +254,3 @@ ensure
     t.close
     t.unlink
 end
-
-
-# Cleanup
-files.each { |n, f| f.close; f.unlink }

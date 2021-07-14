@@ -44,10 +44,14 @@
 			y2: {
 				show: true,
 				min: 0,
-				max: 100,
+				max: 1,
+				type: (error ? 'log' : 'linear'),
+				tick: {
+				    format: d3.format(error ? '.3f' : '.1f'),
+				},
 				padding: { top: 0, bottom: 0 },
 				label: {
-					text: '% of linerate',
+					text: 'fraction of linerate',
 					position: 'outer-middle'
 				}
 			}

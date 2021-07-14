@@ -76,13 +76,15 @@ end
 # }}}
 
 # Crunch the stats # {{{
-Stats = Struct.new(:tx_pps, :rx_pps, :tx_util)
+Stats = Struct.new(:tx_pps, :rx_pps, :tx_util, :rx_loss)
 
 def channel_stats(data, from, to)
     data.map do |k, v|
         tx_pps = v[from]["tx_pps"] / YSCALER.divisor.to_f
         rx_pps = v[to]["rx_pps"] / YSCALER.divisor.to_f
-        Stats.new(tx_pps, rx_pps, v[from]["tx_util"])
+        rx_loss = (v[from]['tx_pps'] - v[to]['rx_pps']) / YSCALER.divisor.to_f
+        rx_loss = 0.0 if rx_loss < 0.0
+        Stats.new(tx_pps, rx_pps, v[from]["tx_util"], rx_loss)
     end
 end
 
@@ -140,27 +142,31 @@ end.to_h
 
 # Compute per profile json (for the graphs)
 ltdata = {}
+edata = {}
 profiles = loadtests.map { |_, c| c['vars']['profile_file'] }.sort.uniq
 profiles.each do |profile|
     pn = KNOWN_PROFILES[profile]
-    out = {}
+    out = {} # out common
+    od = [] # out data
+    oe = [] # out errors
     l = loadtests.find_all { |n, l| l['vars']['profile_file'] == profile }.to_h
     max = l.map { |n, _| stats[n].map { |k, v| v.map { |x| x.tx_pps }.max }.max }.max
     ideal = []
     l.each { |n, _| stats[n].each { |k, v| v.each_with_index { |x, i| ideal[i] ||= 0.0; ideal[i] = [ideal[i], x.tx_pps].max } } }
-    ticks = 0.step(ideal.size - (ideal.size % 100), 100).to_a
+    maxdp = datapoints.first + 1
+    ticks = 0.step(maxdp - (maxdp % 100), 100).to_a
     out['max'] = max
     out['yprefix'] = YSCALER.prefix
     out['ticks'] = ticks
-    out['data'] = [
-        ['ideal'] + ideal.map { |x| x.round(3) },
-    ]
+    od << (['ideal'] + ideal.map { |x| x.round(3) })
     l.each do |tn, _|
         stats[tn].each do |ch, data|
-            out['data'] << (["#{tn} #{ch}→#{1-ch} rx"] + data.map { |x| x.rx_pps.round(3) })
+            od << (["#{tn} #{ch}→#{1-ch} rx"] + data.map { |x| x.rx_pps.round(3) })
+            oe << (["#{tn} #{ch}→#{1-ch} err"] + data.map { |x| x.rx_loss.round(3) })
         end
     end
-    ltdata[pn] = out
+    ltdata[pn] = out.dup.merge({'data': od})
+    edata[pn] = out.dup.merge({'data': oe})
 end
 
 # Output
@@ -241,7 +247,10 @@ begin
             t.puts "    </tr>"
         end
         t.puts "    </table>"
-        t.puts "    <div class=\"loadtest-graph\" data-ltdata=\"#{CGI.escapeHTML(ltdata[pn].to_json)}\" style=\"width: 1200px; height: 600px\"></div>"
+        t.puts "    <div class=\"loadtest-graph\" data-ltdata=\"#{CGI.escapeHTML(ltdata[pn].to_json)}\"></div>"
+        t.puts "    <details><summary>Error graph (click to show)</summary>"
+        t.puts "    <div class=\"loadtest-graph\" data-errdata=\"#{CGI.escapeHTML(edata[pn].to_json)}\"></div>"
+        t.puts "    </details>"
     end
     t.puts <<-'EOF'
   </body>

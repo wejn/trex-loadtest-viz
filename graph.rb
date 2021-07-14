@@ -82,7 +82,7 @@ def channel_stats(data, from, to)
     data.map do |k, v|
         tx_pps = v[from]["tx_pps"] / YSCALER.divisor.to_f
         rx_pps = v[to]["rx_pps"] / YSCALER.divisor.to_f
-        rx_loss = (v[from]['tx_pps'] - v[to]['rx_pps']) / YSCALER.divisor.to_f
+        rx_loss = (v[from]['tx_pps'] - v[to]['rx_pps']) / v[from]['tx_pps']
         rx_loss = 0.0 if rx_loss < 0.0
         Stats.new(tx_pps, rx_pps, v[from]["tx_util"], rx_loss)
     end
@@ -166,7 +166,7 @@ profiles.each do |profile|
         end
     end
     ltdata[pn] = out.dup.merge({'data': od})
-    edata[pn] = out.dup.merge({'data': oe})
+    edata[pn] = out.dup.merge({'data': oe, 'max': 1})
 end
 
 # Output

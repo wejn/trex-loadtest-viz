@@ -37,12 +37,12 @@
 				    format: d3.format('.3f'),
 				},
 				label: {
-				    text: (error ? 'error ' : '') + ltdata['yprefix'] + 'pps' + (error ? " (log)" : ""),
+				    text: (error ? 'fraction of current pps (log)' : ltdata['yprefix'] + 'pps'),
 				    position: 'outer-middle'
 				}
 			},
 			y2: {
-				show: true,
+				show: error ? false : true,
 				min: 0,
 				max: 1,
 				type: (error ? 'log' : 'linear'),

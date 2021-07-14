@@ -102,31 +102,42 @@ stats = loadtests.map do |n, l|
     [n, s]
 end.to_h
 
-def breaking_point(data, from, to)
-    bp = nil
+# max_ok_pps - pps where loss <= FAIL_THRESHOLD
+# max_pps - absolute max pps value
+# max_lr_perc - absolute max percentage of linerate achieved
+MaxPerf = Struct.new(:max_ok_pps, :max_pps, :max_lr_perc)
+
+def eval_max_performance(data, from, to)
+    max_lr_perc = 0
+    max_pps = 0
+    max_ok_pps = nil
     data.each do |k, v|
         tx_pps = v[from]["tx_pps"]
         rx_pps = v[to]["rx_pps"]
-        util = v[from]["tx_util"]
+        util = v[to]["rx_util"]
         if (tx_pps - rx_pps) / tx_pps > FAIL_THRESHOLD
-            if bp.nil?
+            if max_ok_pps.nil?
                 # record first fail
-                bp = Stats.new(tx_pps / YSCALER.divisor.to_f, rx_pps / YSCALER.divisor.to_f, util)
+                max_ok_pps = rx_pps
             end
         else
-            bp = nil # this way, when it recovers, we clear bp
+            max_ok_pps = nil # this way, when it recovers, we clear max_ok_pps
         end
+        max_lr_perc = util
+        max_pps = max_pps < rx_pps ? rx_pps : max_pps
     end
-    bp
+    max_ok_pps = max_pps if max_ok_pps.nil?
+    max_lr_perc = 100.0 if max_lr_perc > 100.0
+    MaxPerf.new(max_ok_pps / YSCALER.divisor.to_f, max_pps / YSCALER.divisor.to_f, max_lr_perc)
 end
 
-breaking_points = loadtests.map do |n, l|
+max_performance = loadtests.map do |n, l|
     if l["stats"].keys.size == 3
         STDERR.puts "W: Stats for #{n} have #{l["stats"].keys} channels (incl. global), this script can only deal with 3."
     end
     s = {}
-    s[0] = breaking_point(l["stats"], "0", "1")
-    s[1] = breaking_point(l["stats"], "1", "0")
+    s[0] = eval_max_performance(l["stats"], "0", "1")
+    s[1] = eval_max_performance(l["stats"], "1", "0")
     [n, s]
 end.to_h
 
@@ -216,27 +227,31 @@ begin
         l = loadtests.find_all { |n, l| l['vars']['profile_file'] == profile }.to_h
         t.puts "    <h2>Profile: #{pn}</h2>"
         t.puts "    <table class=\"stats-table\">"
-        t.puts "    <caption>Point of overload</caption>"
+        t.puts "    <caption>Performance max</caption>"
         t.puts "    <tr>"
         t.puts "      <th rowspan=\"2\">Profile</th>"
-        t.puts "      <th colspan=\"2\">Channel 0</th>"
-        t.puts "      <th colspan=\"2\">Channel 1</th>"
+        t.puts "      <th colspan=\"3\">Channel 0→1</th>"
+        t.puts "      <th colspan=\"3\">Channel 1→0</th>"
         t.puts "    </tr>"
         t.puts "    <tr>"
+        t.puts "      <th>#{YSCALER.prefix}pps at &lt;#{"%.2f" % [FAIL_THRESHOLD*100]}% loss</th>"
         t.puts "      <th>#{YSCALER.prefix}pps</th>"
         t.puts "      <th>%LR</th>"
+        t.puts "      <th>#{YSCALER.prefix}pps at &lt;#{"%.2f" % [FAIL_THRESHOLD*100]}% loss</th>"
         t.puts "      <th>#{YSCALER.prefix}pps</th>"
         t.puts "      <th>%LR</th>"
         t.puts "    </tr>"
-        bpsort = lambda { |(ln, _)| bp = breaking_points[ln]; [bp[0] ? -bp[0].tx_util : -101, bp[1] ? -bp[1].tx_util : -101] }
-        l.sort_by(&bpsort).each do |ln, _|
-            bp = breaking_points[ln]
+        mpsort = lambda { |(ln, _)| mp = max_performance[ln]; [-mp[0].max_lr_perc, -mp[1].max_lr_perc] }
+        l.sort_by(&mpsort).each do |ln, _|
+            mp = max_performance[ln]
             t.puts "    <tr>"
             t.puts "      <td>#{ln}</td>"
-            t.puts "      <td>#{bp[0].nil? ? 'N/A' : bp[0].rx_pps.round(3)}</td>"
-            t.puts "      <td>#{bp[0].nil? ? 'N/A' : ('%.02f%%' % bp[0].tx_util)}</td>"
-            t.puts "      <td>#{bp[1].nil? ? 'N/A' : bp[1].rx_pps.round(3)}</td>"
-            t.puts "      <td>#{bp[1].nil? ? 'N/A' : ('%.02f%%' % bp[1].tx_util)}</td>"
+            t.puts "      <td>#{'%.03f' % mp[0].max_ok_pps}</td>"
+            t.puts "      <td>#{'%.03f' % mp[0].max_pps}</td>"
+            t.puts "      <td>#{'%.02f%%' % mp[0].max_lr_perc}</td>"
+            t.puts "      <td>#{'%.03f' % mp[1].max_ok_pps}</td>"
+            t.puts "      <td>#{'%.03f' % mp[1].max_pps}</td>"
+            t.puts "      <td>#{'%.02f%%' % mp[1].max_lr_perc}</td>"
             t.puts "    </tr>"
         end
         t.puts "    </table>"

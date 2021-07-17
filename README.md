@@ -26,8 +26,10 @@ Run:
 ruby graph.rb *.json
 ```
 
-That will spit out `ltdata.js` as well as `index.html`. The rest needed
+That will spit out graph as `index.html`. The rest needed
 files should be in the repo.
+
+For options please run the tool with `--help` to figure it out.
 
 ## Examples
 

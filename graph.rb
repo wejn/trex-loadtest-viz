@@ -1,22 +1,34 @@
 #!/usr/bin/env ruby
 
-require 'json'
-require 'pp'
-require 'tempfile'
-require 'fileutils'
 require 'cgi'
+require 'fileutils'
+require 'json'
+require 'optparse'
+require 'tempfile'
 
 KNOWN_PROFILES = Hash.new { |h, k| h[k] = File.basename(k, '.py') }
 KNOWN_PROFILES['imix.py'] = 'imix'
 KNOWN_PROFILES['udp_1pkt_simple_bdir.py'] = '64B'
 
-# The point at which we consider the test failed
-FAIL_THRESHOLD = 0.001
-
-# This is akin to a global variable -- YSCALER influences the y axis scaling for the graphs
 YAxisScaling = Struct.new(:divisor, :prefix)
-YSCALER = YAxisScaling.new(1000000, 'M')
-#YSCALER = YAxisScaling.new(1, '')
+class YAxisScaling
+  def to_s
+    "#{self.divisor}:#{self.prefix}"
+  end
+end
+
+FAIL_THRESHOLD_RANGE=(0.0001..1.0)
+
+OPTIONS = {
+  # Output file
+  output: 'index.html',
+
+  # The point at which we consider the test failed
+  fail_threshold: 0.001,
+
+  # The Y axis scaler
+  yscaler: YAxisScaling.new(1000_000, 'M')
+}
 
 WARNINGS = []
 
@@ -24,6 +36,57 @@ def warn(msg)
   WARNINGS << msg
   STDERR.puts "W: #{msg}"
 end
+
+# Parse options / input
+opts = OptionParser.new do |opts|
+  opts.banner = "Usage: #{File.basename($0)} [options] <loadtest.json>+"
+  opts.separator 'Available options:'
+
+  opts.on('-o', '--output FILE', String,
+          "File into which write the output, default: #{OPTIONS[:output]}") do |of|
+    OPTIONS[:output] = of
+  end
+
+  opts.on('-f', '--fail-threshold THRESHOLD', Float,
+          "Float fraction of loss (#{FAIL_THRESHOLD_RANGE.to_s}) at which the test is considered failed, default: #{OPTIONS[:fail_threshold]}") do |ft|
+    raise OptionParser::InvalidArgument, "must be in (#{FAIL_THRESHOLD_RANGE}) range" unless FAIL_THRESHOLD_RANGE.include?(ft)
+
+    OPTIONS[:fail_threshold] = ft
+  end
+
+  opts.on('-y', '--yscaler DIVISOR:PREFIX', String,
+          "Y axis scaler (divisor:prefix), divisor is an integer > 0, default: #{OPTIONS[:yscaler]}") do |ys|
+    rexp = /\A(\d+):(\w*)\z/m
+    begin
+      if rexp =~ ys
+        n = Integer($1)
+        raise "wrong n" if n <= 0
+        OPTIONS[:yscaler] = YAxisScaling.new(n, $2)
+      else
+        raise "didn't match the regexp"
+      end
+    rescue Object
+      raise OptionParser::InvalidArgument, "must be formatted as: #{rexp} and num must be > 0"
+    end
+  end
+
+  opts.on_tail('-h', '--help', 'Show this message') do
+    STDERR.puts opts
+    exit 1
+  end
+end
+
+begin
+  opts.parse!(ARGV)
+rescue OptionParser::InvalidOption
+  STDERR.puts "E: invalid option: #{$!}"
+  exit 1
+rescue OptionParser::InvalidArgument
+  STDERR.puts "E: invalid argument: #{$!.args.join(' ')}"
+  exit 1
+end
+
+
 
 # Load up the loadtests # {{{
 all_inputs_ok = true
@@ -87,8 +150,8 @@ Stats = Struct.new(:tx_pps, :rx_pps, :tx_util, :rx_loss)
 
 def channel_stats(data, from, to)
     data.map do |k, v|
-        tx_pps = v[from]["tx_pps"] / YSCALER.divisor.to_f
-        rx_pps = v[to]["rx_pps"] / YSCALER.divisor.to_f
+        tx_pps = v[from]["tx_pps"] / OPTIONS[:yscaler].divisor.to_f
+        rx_pps = v[to]["rx_pps"] / OPTIONS[:yscaler].divisor.to_f
         rx_loss = (v[from]['tx_pps'] - v[to]['rx_pps']) / v[from]['tx_pps']
         rx_loss = 0.0 if rx_loss < 0.0
         Stats.new(tx_pps, rx_pps, v[from]["tx_util"], rx_loss)
@@ -106,7 +169,7 @@ stats = loadtests.map do |n, l|
     [n, s]
 end.to_h
 
-# max_ok_pps - pps where loss <= FAIL_THRESHOLD
+# max_ok_pps - pps where loss <= OPTIONS[:fail_threshold]
 # max_pps - absolute max pps value
 # max_lr_perc - absolute max percentage of linerate achieved
 MaxPerf = Struct.new(:max_ok_pps, :max_pps, :max_lr_perc)
@@ -119,7 +182,7 @@ def eval_max_performance(data, from, to)
         tx_pps = v[from]["tx_pps"]
         rx_pps = v[to]["rx_pps"]
         util = v[to]["rx_util"]
-        if (tx_pps - rx_pps) / tx_pps > FAIL_THRESHOLD
+        if (tx_pps - rx_pps) / tx_pps > OPTIONS[:fail_threshold]
             if max_ok_pps.nil?
                 # record first fail
                 max_ok_pps = rx_pps
@@ -132,7 +195,7 @@ def eval_max_performance(data, from, to)
     end
     max_ok_pps = max_pps if max_ok_pps.nil?
     max_lr_perc = 100.0 if max_lr_perc > 100.0
-    MaxPerf.new(max_ok_pps / YSCALER.divisor.to_f, max_pps / YSCALER.divisor.to_f, max_lr_perc)
+    MaxPerf.new(max_ok_pps / OPTIONS[:yscaler].divisor.to_f, max_pps / OPTIONS[:yscaler].divisor.to_f, max_lr_perc)
 end
 
 max_performance = loadtests.map do |n, l|
@@ -163,7 +226,7 @@ profiles.each do |profile|
     maxdp = datapoints.first + 1
     ticks = 0.step(maxdp - (maxdp % 100), 100).to_a
     out['max'] = max
-    out['yprefix'] = YSCALER.prefix
+    out['yprefix'] = OPTIONS[:yscaler].prefix
     out['ticks'] = ticks
     od << (['ideal'] + ideal.map { |x| x.round(3) })
     oe << (['txrate'] + ideal.map { |x| x.round(3) })
@@ -174,7 +237,7 @@ profiles.each do |profile|
         end
     end
     ltdata[pn] = out.dup.merge({'data': od})
-    edata[pn] = out.dup.merge({'data': oe, 'ft': FAIL_THRESHOLD})
+    edata[pn] = out.dup.merge({'data': oe, 'ft': OPTIONS[:fail_threshold]})
 end
 
 # Output
@@ -240,16 +303,16 @@ begin
         t.puts "    <table class=\"stats-table\">"
         t.puts "    <caption>Performance max</caption>"
         t.puts "    <tr>"
-        t.puts "      <th rowspan=\"2\">Profile</th>"
+        t.puts "      <th rowspan=\"2\">Test name</th>"
         t.puts "      <th colspan=\"3\">Channel 0→1</th>"
         t.puts "      <th colspan=\"3\">Channel 1→0</th>"
         t.puts "    </tr>"
         t.puts "    <tr>"
-        t.puts "      <th>#{YSCALER.prefix}pps at &lt;#{"%.2f" % [FAIL_THRESHOLD*100]}% loss</th>"
-        t.puts "      <th>#{YSCALER.prefix}pps</th>"
+        t.puts "      <th>#{OPTIONS[:yscaler].prefix}pps at &lt;#{"%.2f" % [OPTIONS[:fail_threshold]*100]}% loss</th>"
+        t.puts "      <th>#{OPTIONS[:yscaler].prefix}pps</th>"
         t.puts "      <th>%LR</th>"
-        t.puts "      <th>#{YSCALER.prefix}pps at &lt;#{"%.2f" % [FAIL_THRESHOLD*100]}% loss</th>"
-        t.puts "      <th>#{YSCALER.prefix}pps</th>"
+        t.puts "      <th>#{OPTIONS[:yscaler].prefix}pps at &lt;#{"%.2f" % [OPTIONS[:fail_threshold]*100]}% loss</th>"
+        t.puts "      <th>#{OPTIONS[:yscaler].prefix}pps</th>"
         t.puts "      <th>%LR</th>"
         t.puts "    </tr>"
         mpsort = lambda { |(ln, _)| mp = max_performance[ln]; [-mp[0].max_lr_perc, -mp[1].max_lr_perc] }
@@ -276,8 +339,11 @@ begin
 </html>
     EOF
     t.close
-    FileUtils.cp(t.path, 'index.html')
-    File.chmod((0666 ^ File.umask), 'index.html')
+    if OPTIONS[:output] == '-' || OPTIONS[:output].empty?
+      STDOUT.puts File.read(t.path)
+    else
+      File.open(OPTIONS[:output], 'w') { |f| f.write(File.read(t.path)) }
+    end
 ensure
     t.close
     t.unlink

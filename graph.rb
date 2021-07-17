@@ -30,7 +30,10 @@ OPTIONS = {
   yscaler: YAxisScaling.new(1000_000, 'M'),
 
   # url prefix for assets (js, css) in the HTML output
-  asset_prefix: ''
+  asset_prefix: '',
+
+  # title
+  title: 'Loadtest results'
 }
 
 WARNINGS = []
@@ -76,6 +79,11 @@ opts = OptionParser.new do |opts|
   opts.on('-a', '--asset-prefix PREFIX', String,
           "HTML assets (js, css) prefix, default: '#{OPTIONS[:asset_prefix]}'") do |ap|
     OPTIONS[:asset_prefix] = ap
+  end
+
+  opts.on('-t', '--title TITLE', String,
+          "HTML title/h1, default: '#{OPTIONS[:title]}'") do |t|
+    OPTIONS[:title] = t
   end
 
   opts.on_tail('-h', '--help', 'Show this message') do
@@ -285,10 +293,10 @@ begin
       footer { padding-top: 1em; border-top: 1px solid #aaa; margin-top: 2em; text-align: center; color: #aaa; font-size: 70%; }
       footer a { color: #aaa; }
     </style>
-    <title>Loadtest results</title>
+    <title>#{CGI.escapeHTML(OPTIONS[:title])}</title>
   </head>
   <body>
-    <h1>Loadtest results</h1>
+    <h1>#{CGI.escapeHTML(OPTIONS[:title])}</h1>
     EOF
     # Warnings section
     unless WARNINGS.empty?

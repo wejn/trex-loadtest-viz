@@ -280,7 +280,8 @@ begin
       table { border: 2px solid black; border-collapse: collapse; }
       table th { border: 1px solid #aaa; padding: 0.2em 0.5em; }
       table th:not([colspan]) { border-bottom: 2px solid black; }
-      table td { border: 1px solid #aaa; padding: 0.2em 0.5em; }
+      table td { text-align: right; border: 1px solid #aaa; padding: 0.2em 0.5em; }
+      table td.left { text-align: left; }
     </style>
     <title>Loadtest results</title>
   </head>
@@ -308,7 +309,7 @@ begin
     config_keys_to_verify.zip(configs.first).each do |k,v|
         t.puts <<-EOF
       <tr>
-        <td>#{k}</td>
+        <td class="left">#{k}</td>
         <td>#{v}</td>
       </tr>
         EOF
@@ -338,7 +339,7 @@ begin
         l.sort_by(&mpsort).each do |ln, _|
             mp = max_performance[ln]
             t.puts "    <tr>"
-            t.puts "      <td>#{ln}</td>"
+            t.puts "      <td class=\"left\">#{ln}</td>"
             t.puts "      <td>#{'%.03f' % mp[0].max_ok_pps}</td>"
             t.puts "      <td>#{'%.03f' % mp[0].max_pps}</td>"
             t.puts "      <td>#{'%.02f%%' % mp[0].max_lr_perc}</td>"

@@ -29,6 +29,18 @@ ruby graph.rb *.json
 That will spit out `ltdata.js` as well as `index.html`. The rest needed
 files should be in the repo.
 
+## Examples
+
+A short write-up about the rationale / setup:
+
+[Succeeding at a network loadtest](https://wejn.org/2021/07/succeeding-at-network-loadtest/)
+
+with [actual (if boring) output](https://wejn.org/assets/2021-loadtestsuccess/result.html)
+for the following inputs:
+[loopback-64B.json](https://wejn.org/assets/2021-loadtestsuccess/loopback-64B.json),
+[loopback-imix.json](https://wejn.org/assets/2021-loadtestsuccess/loopback-imix.json).
+
+
 ## Credits
 © 2021 Michal Jirků, licensed under GPL-3.0 [unless agreed otherwise]
 

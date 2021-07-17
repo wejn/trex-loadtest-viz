@@ -18,6 +18,13 @@ YAxisScaling = Struct.new(:divisor, :prefix)
 YSCALER = YAxisScaling.new(1000000, 'M')
 #YSCALER = YAxisScaling.new(1, '')
 
+WARNINGS = []
+
+def warn(msg)
+  WARNINGS << msg
+  STDERR.puts "W: #{msg}"
+end
+
 # Load up the loadtests # {{{
 all_inputs_ok = true
 loadtests = ARGV.map do |c|
@@ -53,7 +60,7 @@ when 0
 when 1
     # good, expect all loadtests to have same config
 else
-    STDERR.puts "W: multiple loadtest configs, expect the graphs to be garbled: #{configs.inspect}"
+    warn "multiple loadtest configs, expect the graphs to be garbled: #{configs.inspect}"
     # FTR, I expect all the keys from config_keys_to_verify to be the same value
 end
 
@@ -70,7 +77,7 @@ when 1
         # good, I expect all datapoints of same size, and non-zero at that
     end
 else
-    STDERR.puts "W: multiple loadtest datapoint counts, expect the graphs to be garbled: #{configs.inspect}"
+    warn "multiple loadtest datapoint counts, expect the graphs to be garbled: #{datapoints.inspect}"
     # FTR, I expect all the loadtests to have the same amount of datapoints
 end
 # }}}
@@ -91,7 +98,7 @@ end
 
 stats = loadtests.map do |n, l|
     if l["stats"].keys.size == 3
-        STDERR.puts "W: Stats for #{n} have #{l["stats"].keys} channels (incl. global), this script can only deal with 3."
+        warn "Stats for #{n} have #{l["stats"].keys} channels (incl. global), this script can only deal with 3."
     end
     s = {}
     s[0] = channel_stats(l["stats"], "0", "1")
@@ -130,7 +137,7 @@ end
 
 max_performance = loadtests.map do |n, l|
     if l["stats"].keys.size == 3
-        STDERR.puts "W: Stats for #{n} have #{l["stats"].keys} channels (incl. global), this script can only deal with 3."
+        warn "Stats for #{n} have #{l["stats"].keys} channels (incl. global), this script can only deal with 3."
     end
     s = {}
     s[0] = eval_max_performance(l["stats"], "0", "1")
@@ -198,6 +205,15 @@ begin
   <body>
     <h1>Loadtest results</h1>
     EOF
+    # Warnings section
+    unless WARNINGS.empty?
+      t.puts "    <h2>Generator warnings</h2>"
+      t.puts "    <ul>"
+      for w in WARNINGS
+        t.puts "      <li>#{CGI.escapeHTML(w)}</li>"
+      end
+      t.puts "    </ul>"
+    end
     # Config section
     t.puts <<-'EOF'
     <h2>Config</h2>

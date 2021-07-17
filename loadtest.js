@@ -62,7 +62,7 @@
 		},
 		grid: {
 			y: {
-			    lines: error ? [{value: ltdata['ft'], text: 'fail threshold', class: 'ft', position: 'start'}, {value: ltdata['max']}] : [{value: ltdata['max']}]
+			    lines: error ? [{value: ltdata['ft'], text: 'fail threshold', class: 'ft', position: 'start'}] : [{value: ltdata['max']}]
 			}
 		}
 	});

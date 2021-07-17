@@ -120,7 +120,7 @@ def eval_max_performance(data, from, to)
         else
             max_ok_pps = nil # this way, when it recovers, we clear max_ok_pps
         end
-        max_lr_perc = util
+        max_lr_perc = max_lr_perc < util ? util : max_lr_perc
         max_pps = max_pps < rx_pps ? rx_pps : max_pps
     end
     max_ok_pps = max_pps if max_ok_pps.nil?

@@ -27,7 +27,10 @@ OPTIONS = {
   fail_threshold: 0.001,
 
   # The Y axis scaler
-  yscaler: YAxisScaling.new(1000_000, 'M')
+  yscaler: YAxisScaling.new(1000_000, 'M'),
+
+  # url prefix for assets (js, css) in the HTML output
+  asset_prefix: ''
 }
 
 WARNINGS = []
@@ -68,6 +71,11 @@ opts = OptionParser.new do |opts|
     rescue Object
       raise OptionParser::InvalidArgument, "must be formatted as: #{rexp} and num must be > 0"
     end
+  end
+
+  opts.on('-a', '--asset-prefix PREFIX', String,
+          "HTML assets (js, css) prefix, default: '#{OPTIONS[:asset_prefix]}'") do |ap|
+    OPTIONS[:asset_prefix] = ap
   end
 
   opts.on_tail('-h', '--help', 'Show this message') do
@@ -242,18 +250,29 @@ end
 
 # Output
 ## Html
+def ap(f)
+  pfx = OPTIONS[:asset_prefix]
+  # empty prefix -> just asset
+  if [nil, ''].include?(pfx)
+    f
+  else
+    # trailing '/' vs without
+    pfx[-1,1] == '/' ? pfx + f : [pfx, f].join('/')
+  end
+end
+
 t = Tempfile.new('index-html')
 begin
-    t.puts <<-'EOF'
+    t.puts <<-EOF
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <link href="c3.css" rel="stylesheet">
-    <script src="d3.v5.min.js" charset="utf-8"></script>
-    <script src="c3.min.js"></script>
-    <script src="jquery.min.js"></script>
-    <script src="loadtest.js"></script>
+    <link href="#{ap('c3.css')}" rel="stylesheet">
+    <script src="#{ap('d3.v5.min.js')}" charset="utf-8"></script>
+    <script src="#{ap('c3.min.js')}"></script>
+    <script src="#{ap('jquery.min.js')}"></script>
+    <script src="#{ap('loadtest.js')}"></script>
     <style>
       .loadtest-graph { margin: 2em 0; }
       .ft line { stroke: #a00; fill: #a00; }

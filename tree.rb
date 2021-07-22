@@ -85,7 +85,9 @@ def process_ltdir(source, target, ap)
       tn = e + '.html'
       outf = File.join(target, tn)
       system("ruby", GRAPH_LOC, "--asset-prefix=#{ap}", "-t", "#{e} :: Loadtest results", "-o", outf, *df)
-      #File.open(outf, 'w') { |f| f.puts([e, tn, outf].inspect) }
+      unless $?.exitstatus.zero?
+        File.open(outf, 'w') { |f| f.puts "This generator failed, but I don't have details, sorry." }
+      end
       out << [tn, e]
     end
     out_html(File.join(target, 'index.html'), out)

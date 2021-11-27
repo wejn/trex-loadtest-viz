@@ -33,7 +33,10 @@ OPTIONS = {
   asset_prefix: '',
 
   # title
-  title: 'Loadtest results'
+  title: 'Loadtest results',
+
+  # Only graph these channels. nil = all
+  only_channels: nil
 }
 
 WARNINGS = []
@@ -84,6 +87,16 @@ opts = OptionParser.new do |opts|
   opts.on('-t', '--title TITLE', String,
           "HTML title/h1, default: '#{OPTIONS[:title]}'") do |t|
     OPTIONS[:title] = t
+  end
+
+  opts.on('--only-channels x,y,x', Array,
+          'Only graph channels x,y,x (0,1,..)') do |list|
+    begin
+      list.map! { |x| Integer(x) }
+    rescue ArgumentError
+      raise OptionParser::InvalidArgument, "list must be comma separated integers; found: #$!"
+    end
+    OPTIONS[:only_channels] = list
   end
 
   opts.on_tail('-h', '--help', 'Show this message') do
@@ -248,8 +261,9 @@ profiles.each do |profile|
     oe << (['txrate'] + ideal.map { |x| x.round(3) })
     l.each do |tn, _|
         stats[tn].each do |ch, data|
-            od << (["#{tn} #{ch}→#{1-ch} rx"] + data.map { |x| x.rx_pps.round(3) })
-            oe << (["#{tn} #{ch}→#{1-ch} err"] + data.map { |x| x.rx_loss.round(3) })
+          next if OPTIONS[:only_channels] && ! OPTIONS[:only_channels].include?(ch)
+          od << (["#{tn} #{ch}→#{1-ch} rx"] + data.map { |x| x.rx_pps.round(3) })
+          oe << (["#{tn} #{ch}→#{1-ch} err"] + data.map { |x| x.rx_loss.round(3) })
         end
     end
     ltdata[pn] = out.dup.merge({'data': od})

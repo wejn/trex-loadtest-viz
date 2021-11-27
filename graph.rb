@@ -194,7 +194,7 @@ stats = loadtests.map do |n, l|
     end
     s = {}
     s[0] = channel_stats(l["stats"], "0", "1")
-    s[1] = channel_stats(l["stats"], "1", "0")
+    s[1] = channel_stats(l["stats"], "1", "0") unless l["vars"]["unidirectional"]
     [n, s]
 end.to_h
 
@@ -233,7 +233,7 @@ max_performance = loadtests.map do |n, l|
     end
     s = {}
     s[0] = eval_max_performance(l["stats"], "0", "1")
-    s[1] = eval_max_performance(l["stats"], "1", "0")
+    s[1] = eval_max_performance(l["stats"], "1", "0") unless l["vars"]["unidirectional"]
     [n, s]
 end.to_h
 
@@ -359,7 +359,7 @@ begin
         t.puts "      <th>#{OPTIONS[:yscaler].prefix}pps</th>"
         t.puts "      <th>%LR</th>"
         t.puts "    </tr>"
-        mpsort = lambda { |(ln, _)| mp = max_performance[ln]; [-mp[0].max_lr_perc, -mp[1].max_lr_perc] }
+        mpsort = lambda { |(ln, _)| mp = max_performance[ln]; [-mp[0].max_lr_perc, mp[1] ? -mp[1].max_lr_perc : 0] }
         l.sort_by(&mpsort).each do |ln, _|
             mp = max_performance[ln]
             t.puts "    <tr>"
@@ -367,9 +367,9 @@ begin
             t.puts "      <td>#{'%.03f' % mp[0].max_ok_pps}</td>"
             t.puts "      <td>#{'%.03f' % mp[0].max_pps}</td>"
             t.puts "      <td>#{'%.02f%%' % mp[0].max_lr_perc}</td>"
-            t.puts "      <td>#{'%.03f' % mp[1].max_ok_pps}</td>"
-            t.puts "      <td>#{'%.03f' % mp[1].max_pps}</td>"
-            t.puts "      <td>#{'%.02f%%' % mp[1].max_lr_perc}</td>"
+            t.puts "      <td>#{mp[1] ? '%.03f' % mp[1].max_ok_pps : 'n/a'}</td>"
+            t.puts "      <td>#{mp[1] ? '%.03f' % mp[1].max_pps : 'n/a'}</td>"
+            t.puts "      <td>#{mp[1] ? '%.02f%%' % mp[1].max_lr_perc : 'n/a'}</td>"
             t.puts "    </tr>"
         end
         t.puts "    </table>"
